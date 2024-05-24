@@ -1,33 +1,38 @@
 import envConfig from "@/config";
-import React from "react";
 import { cookies } from "next/headers";
-export default async function Profile() {
+import ProfileView from "@/app/profile/Profile";
+import profileApiRequest from "@/apiRequest/profile.api";
+export default async function ProfilePage() {
 	const cookieStore = cookies();
 	const sessionToken = cookieStore.get("sessionToken");
 
-	// console.log("🚀 ~ file: page.tsx:8 ~ Profile ~ sessionToken:", sessionToken);
+	// const result = await fetch(`${envConfig.NEXT_PUBLIC_API_URL}/account/me`, {
+	// 	method: "GET",
+	// 	headers: {
+	// 		"Content-Type": "application/json",
+	// 		Authorization: `Bearer ${sessionToken?.value}`,
+	// 	},
+	// }).then(async (response) => {
+	// 	const metadata = await response.json();
+	// 	const payload = {
+	// 		status: response.status,
+	// 		metadata,
+	// 	};
 
-	const result = await fetch(`${envConfig.NEXT_PUBLIC_API_URL}/account/me`, {
-		method: "GET",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${sessionToken?.value}`,
-		},
-	}).then(async (response) => {
-		const metadata = await response.json();
-		const payload = {
-			status: response.status,
-			metadata,
-		};
+	// 	if (!response.ok) {
+	// 		throw payload;
+	// 	}
 
-		if (!response.ok) {
-			throw payload;
-		}
+	// 	return payload;
+	// });
 
-		return payload;
-	});
+	// console.log(result);
+	const result = await profileApiRequest.me((sessionToken?.value as string) || "");
 
-	console.log(result);
-
-	return <div>Profile</div>;
+	return (
+		<>
+			<h1>Server Component: {result.payload.data.name}</h1>
+			<ProfileView />
+		</>
+	);
 }

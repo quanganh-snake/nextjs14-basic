@@ -14,4 +14,5 @@ if (!configProject.success) {
 }
 
 const envConfig = configProject.data
+
 export default envConfig

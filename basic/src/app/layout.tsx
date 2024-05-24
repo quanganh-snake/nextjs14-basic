@@ -26,10 +26,8 @@ export default function RootLayout({
 			<html lang="en" suppressHydrationWarning={true}>
 				<body className={inter.className}>
 					<ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-						<AppProvider inititalSessionToken={sessionToken?.value as string}>
-							<Header />
-							{children}
-						</AppProvider>
+						<Header />
+						<AppProvider inititalSessionToken={sessionToken?.value as string}>{children}</AppProvider>
 						<Toaster />
 					</ThemeProvider>
 				</body>

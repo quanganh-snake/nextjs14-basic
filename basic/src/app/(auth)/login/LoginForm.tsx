@@ -8,8 +8,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/ui/use-toast";
 import { useTokenApp } from "@/app/contexts/AppProvider";
+import authApiRequest from "@/apiRequest/auth.api";
+import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
+	const router = useRouter();
 	const { toast } = useToast();
 	const { setSessionToken } = useTokenApp();
 	const form = useForm<LoginBodyType>({
@@ -22,38 +25,41 @@ export default function LoginForm() {
 
 	async function onSubmit(values: LoginBodyType) {
 		try {
-			const result = await fetch(`${envConfig.NEXT_PUBLIC_API_URL}/auth/login`, {
-				method: "POST",
-				body: JSON.stringify(values),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			}).then(async (res) => {
-				const metadata = await res.json();
-				const payload = {
-					status: res.status,
-					metadata,
-				};
+			// const result = await fetch(`${envConfig.NEXT_PUBLIC_API_URL}/auth/login`, {
+			// 	method: "POST",
+			// 	body: JSON.stringify(values),
+			// 	headers: {
+			// 		"Content-Type": "application/json",
+			// 	},
+			// }).then(async (res) => {
+			// 	const metadata = await res.json();
+			// 	const payload = {
+			// 		status: res.status,
+			// 		metadata,
+			// 	};
 
-				if (!res.ok) {
-					throw payload;
-				}
-				return payload;
-			});
+			// 	if (!res.ok) {
+			// 		throw payload;
+			// 	}
+			// 	return payload;
+			// });
+			const result = await authApiRequest.login(values);
 			toast({
-				title: result.metadata.message,
+				title: result.payload.message,
 			});
-			const resNextServer = await fetch("/api/auth", {
-				method: "POST",
-				body: JSON.stringify(result),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			}).then(async (res) => {
-				return res.json();
-			});
+			// const resNextServer = await fetch("/api/auth", {
+			// 	method: "POST",
+			// 	body: JSON.stringify(result),
+			// 	headers: {
+			// 		"Content-Type": "application/json",
+			// 	},
+			// }).then(async (res) => {
+			// 	return res.json();
+			// });
+			await authApiRequest.auth({ sessionToken: result.payload.data.token });
 			// console.log("🚀 ~ file: LoginForm.tsx:52 ~ onSubmit ~ resNextServer:", resNextServer);
-			setSessionToken(resNextServer.token);
+			setSessionToken(result.payload.data.token);
+			router.push("/profile");
 		} catch (error: any) {
 			console.log(error);
 			const errors = error.metadata.errors as { field: string; message: string }[];
