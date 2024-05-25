@@ -6,7 +6,7 @@ const authPaths = ['/login', '/register']
 export function middleware(request: NextRequest) {
   let sessionToken = request.cookies.get('sessionToken')?.value
   const { pathname } = request.nextUrl
-  console.log('check');
+  // console.log('check');
 
   // Chưa đăng nhập thì không cho vào các privatePaths
   if (privatePaths.some(path => pathname.startsWith(path)) && !sessionToken) {

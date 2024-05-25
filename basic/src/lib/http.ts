@@ -1,13 +1,30 @@
-// import { RequestInit } from "next/dist/server/web/spec-extension/request";
-type CustomOptions = RequestInit & {
+import { normalizePath } from "@/lib/utils";
+import { LoginResType } from "@/schemaValidations/auth.schema";
+import { redirect } from "next/navigation";
+
+type CustomOptions = Omit<RequestInit, 'method'> & {
   baseUrl?: string | undefined
 }
 
-class HttpError extends Error {
+const ENTITY_ERROR_STATUS = 422
+const AUTHENTICATION_ERROR_STATUS = 401
+
+type EntityErrorPayload = {
+  message: string
+  errors: {
+    field: string
+    message: string
+  }[]
+}
+
+export class HttpError extends Error {
 
   // variables
   status: number = 0;
-  payload: any = null;
+  payload: {
+    message: string
+    [key: string]: any
+  };
 
   constructor({ status, payload }: { status: number, payload: any }) {
     super('Http Error')
@@ -16,11 +33,49 @@ class HttpError extends Error {
   }
 }
 
+export class EntityError extends HttpError {
+  status: number = ENTITY_ERROR_STATUS
+  payload: EntityErrorPayload
+  constructor({ status, payload }: { status: number, payload: EntityErrorPayload }) {
+    super({ status, payload })
 
+    if (status !== ENTITY_ERROR_STATUS) {
+      throw new Error('Entity Status is not 422!')
+    }
+
+    this.status = ENTITY_ERROR_STATUS
+    this.payload = payload
+  }
+}
+
+class SessionToken {
+  private _token: string = ''
+
+  get value() {
+    return this._token
+  }
+
+  set value(tokenValue: string) {
+
+    // Nếu gọi method này ở server -> Lỗi
+    if (typeof window === 'undefined') {
+      throw new Error('Cannot set token on server side')
+    }
+    this._token = tokenValue
+  }
+}
+
+export const clientSessionToken = new SessionToken()
+
+
+let clientLogoutRequest: null | Promise<any> = null
 const request = async<Response>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', endpoint: string, options?: CustomOptions | undefined) => {
+
+
   const body = options?.body ? JSON.stringify(options?.body) : undefined
   const baseHeaders = {
     'Content-Type': 'application/json',
+    Authorization: clientSessionToken.value ? `Bearer ${clientSessionToken.value}` : ''
   }
   /**
    * 1. Nếu không truyền baseUrl hoặc baseUrl = undefined => lấy từ envConfig.NEXT_PUBLIC_API_URL
@@ -46,9 +101,45 @@ const request = async<Response>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELE
   }
 
   if (!response.ok) {
-    throw new HttpError(data)
+    // throw new HttpError(data)
+    if (response.status === ENTITY_ERROR_STATUS) {
+      throw new EntityError(data as {
+        status: 422,
+        payload: EntityErrorPayload
+      })
+    } else if (response.status === AUTHENTICATION_ERROR_STATUS) {
+      // Xử lý authentication hết hạn phía client (browser)
+      if (typeof window !== 'undefined') {
+        if (!clientLogoutRequest) {
+          clientLogoutRequest = fetch('/api/auth/logout', {
+            method: 'POST',
+            body: JSON.stringify({ force: true }),
+            headers: {
+              ...baseHeaders,
+            }
+          })
+        }
+        await clientLogoutRequest
+        clientSessionToken.value = ''
+        location.href = '/login'
+      } else {
+        // Xử lý hết hạn phía server
+        const sessoinToken = (options?.headers as any)?.Authorization?.split('Bearer ')[1]
+        redirect(`/logout?sessionToken=${sessoinToken}`)
+      }
+    } else {
+      throw new HttpError(data)
+    }
   }
 
+  // Đảm bảo logic chỉ chạy ở phía client (browser)
+  if (typeof window !== 'undefined') {
+    if (['/auth/login', '/auth/register'].some(path => path === normalizePath(endpoint))) {
+      clientSessionToken.value = (payload as LoginResType).data.token
+    } else if (['/auth/logout'].includes(endpoint)) {
+      clientSessionToken.value = ''
+    }
+  }
   return data
 }
 

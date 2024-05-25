@@ -7,5 +7,7 @@ const profileApiRequest = {
       'Authorization': `Bearer ${sesstionToken}`,
     }
   }),
+  meClient: () => http.get<AccountResType>('/account/me'),
+  update: (body: any) => http.put<AccountResType>('/account/me', body)
 }
 export default profileApiRequest

@@ -7,14 +7,16 @@ import { LoginBody, LoginBodyType } from "@/schemaValidations/auth.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/ui/use-toast";
-import { useTokenApp } from "@/app/contexts/AppProvider";
+// import { useTokenApp } from "@/app/contexts/AppProvider";
 import authApiRequest from "@/apiRequest/auth.api";
 import { useRouter } from "next/navigation";
+import { clientSessionToken } from "@/lib/http";
+import { handleErrorApi } from "@/lib/utils";
 
 export default function LoginForm() {
 	const router = useRouter();
 	const { toast } = useToast();
-	const { setSessionToken } = useTokenApp();
+	// const { setSessionToken } = useTokenApp();
 	const form = useForm<LoginBodyType>({
 		resolver: zodResolver(LoginBody),
 		defaultValues: {
@@ -58,26 +60,11 @@ export default function LoginForm() {
 			// });
 			await authApiRequest.auth({ sessionToken: result.payload.data.token });
 			// console.log("🚀 ~ file: LoginForm.tsx:52 ~ onSubmit ~ resNextServer:", resNextServer);
-			setSessionToken(result.payload.data.token);
+			// setSessionToken(result.payload.data.token);
+			clientSessionToken.value = result.payload.data.token;
 			router.push("/profile");
 		} catch (error: any) {
-			console.log(error);
-			const errors = error.metadata.errors as { field: string; message: string }[];
-			const status = error.status as number;
-			if (status === 422) {
-				errors.forEach(({ field, message }) => {
-					form.setError(field as "email" | "password", {
-						type: "server",
-						message: message,
-					});
-				});
-			} else {
-				toast({
-					variant: "destructive",
-					title: "Error!",
-					description: error.payload.message,
-				});
-			}
+			handleErrorApi({ error, setError: form.setError, duration: 2000 });
 		}
 	}
 

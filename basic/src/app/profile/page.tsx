@@ -1,7 +1,7 @@
-import envConfig from "@/config";
 import { cookies } from "next/headers";
 import ProfileView from "@/app/profile/Profile";
 import profileApiRequest from "@/apiRequest/profile.api";
+import ProfileForm from "@/app/profile/ProfileForm";
 export default async function ProfilePage() {
 	const cookieStore = cookies();
 	const sessionToken = cookieStore.get("sessionToken");
@@ -31,8 +31,11 @@ export default async function ProfilePage() {
 
 	return (
 		<>
-			<h1>Server Component: {result.payload.data.name}</h1>
-			<ProfileView />
+			{/* <h1>Server Component: {result.payload.data.name}</h1> */}
+			{/* <ProfileView /> */}
+			<div className="w-full md:w-1/6 lg:w-1/4 px-6">
+				<ProfileForm profile={result.payload.data} />
+			</div>
 		</>
 	);
 }
